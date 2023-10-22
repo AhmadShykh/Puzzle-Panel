@@ -22,6 +22,7 @@ public class levelControl : MonoBehaviour
     [SerializeField] Sprite mashroomSprite;
 
     [Header("Level Elements")]
+    [SerializeField] GameObject startObject;
     [SerializeField] GameObject scoreText;
     [SerializeField] GameObject turnsText;
     [SerializeField] GameObject[] heartImages;
@@ -37,6 +38,7 @@ public class levelControl : MonoBehaviour
     [SerializeField]  Animator soundPlayingCell;
     [SerializeField] AudioClip WrongMove;
     [SerializeField] AudioClip gameOver;
+    [SerializeField] AudioClip clearLevelAudio;
 
     [Header("Animation Objects")]
     [SerializeField] Animator sideStatues;
@@ -45,8 +47,11 @@ public class levelControl : MonoBehaviour
     int minflipTitles = 50;
     int maxflipTitles = 100;
   
-    int cellPixel = 32, gridSize, difficulty, playerTurns ;
+    int cellPixel = 32, gridSize, difficulty, playerTurns, level, score ;
 
+    //Checking If the panels are hidden or not
+    bool panelsActive = true ;
+    
     //Saving sprite to reset level
     Sprite[] bottomCanvaSprites;
 
@@ -57,64 +62,147 @@ public class levelControl : MonoBehaviour
     {
         if (minflipTitles <= maxflipTitles)
         {
+            
             mapAudioSource = GetComponent<AudioSource>();
-            gridSize = gridMinSize;
+            
+            
+            
+            //Set them each time playAgain or win
+            level = 1;
+            gridSize = gridMaxSize;
             difficulty = 0;
+            score = 15;
+            heartInd = 0;
+
+            //Setting size of the save panel
             bottomCanvaSprites = new Sprite[gridSize * gridSize];
-            //Setting the score to zero 
-            scoreText.GetComponent<TextMeshProUGUI>().text = "0";
 
-
-            //Creating the top panel 
-            createMap(topCanvas);
-            soundPlayingCell.Play("playSound");
+            startLevel();
 
         }
         else
             Debug.Log("Mainimum tiles to flip is smaller than maximum tiles to flip.");
 
     }
+    //Creating everthing to display them on screen
+    void startLevel()
+	{
+        GetComponent<pauseScript>().enabled = false;
+        setLevelsAndTurns();
+        startObject.SetActive(true);
+        setPanelsActive(false);
+        setHeartActive(false);
+        scoreText.SetActive(false);
+        turnsText.SetActive(false);
 
+
+        //Creating the top panel 
+        createPanels();
+
+        StartCoroutine(displayLevel());
+    }
+    //Displaying the level after everything set
+    IEnumerator displayLevel()
+    {
+        yield return new WaitForSeconds(2);
+        flipTopBottomCells();
+
+        //Setting the score to zero 
+        scoreText.GetComponent<TextMeshProUGUI>().text = score.ToString();
+        //Setting the turns
+        turnsText.GetComponent<TextMeshProUGUI>().text = playerTurns.ToString();
+
+        soundPlayingCell.Play("playSound");
+
+        startObject.SetActive(false);
+        setPanelsActive(true);
+        setHeartActive(true);
+        scoreText.SetActive(true);
+        turnsText.SetActive(true);
+        GetComponent<pauseScript>().enabled = true;
+    }
+
+    void setLevelsAndTurns()
+	{
+        TextMeshProUGUI[] levelTexts = startObject.GetComponentsInChildren<TextMeshProUGUI>();
+        levelTexts[0].text = "Level" + level.ToString();
+        levelTexts[1].text = dicideTurns().ToString();
+	}
+    void setHeartActive(bool active)
+	{
+        if(heartInd < 3)
+		{
+            heartImages[2].SetActive(active);
+            if (heartInd < 2)
+			{
+                heartImages[1].SetActive(active);
+                if(heartInd < 1)
+                    heartImages[0].SetActive(active);
+            }
+        }
+            
+        
+        
+        
+        
+        if(active)
+		{
+
+		}
+    }
+
+    
     // Update is called once per frame
     void Update()
     {
 		
     }
 
-    void createMap(Canvas panelCanvas)
+    void createPanels()
 	{
         
-        panelCanvas.GetComponent<RectTransform>().sizeDelta = new Vector2(cellPixel * gridSize, cellPixel * gridSize);
-        for(int i = 0; i<  gridSize; i++)
+        topCanvas.GetComponent<RectTransform>().sizeDelta = new Vector2(cellPixel * gridSize, cellPixel * gridSize);
+        bottomCanvas.GetComponent<RectTransform>().sizeDelta = new Vector2(cellPixel * gridSize, cellPixel * gridSize);
+        for (int row = 0; row <  gridSize; row++)
 		{
-            for(int j =0; j < gridSize; j++)
+            for(int col =0; col < gridSize; col++)
 			{
-                GameObject cell = Instantiate(cellObj, panelCanvas.transform);
-                cell.GetComponent<Button>().interactable = false;
-                cell.GetComponent<Grid>().enabled = false;
+                GameObject topCell = Instantiate(cellObj, topCanvas.transform);
+                topCell.GetComponent<Button>().interactable = false;
+                topCell.GetComponent<Grid>().enabled = false;
+                GameObject bottomCell = Instantiate(cellObj, bottomCanvas.transform);
+                bottomCell.GetComponent<Grid>().x = row;
+                bottomCell.GetComponent<Grid>().y = col;
             }
         }
-        Animator[] allCells = panelCanvas.GetComponentsInChildren<Animator>();
+
+    }
+    void flipTopBottomCells()
+    {
+        flipTopCanvasTiles();
+
+        flipInBottomPanel();
+    }
+    void flipTopCanvasTiles()
+	{
+        Animator[] allCells = topCanvas.GetComponentsInChildren<Animator>();
         int flipCellPercentage = Random.Range(minflipTitles, maxflipTitles);
         int cellsToFlip = (flipCellPercentage * gridSize * gridSize) / 100;
 
         int cellNum;
         for (int i = 0; i < cellsToFlip; i++)
-		{
-            
+        {
+
             do
             {
                 cellNum = Random.Range(0, gridSize * gridSize - 1);
             } while (allCells[cellNum].GetComponent<Image>().sprite == mashroomSprite);
-            allCells[cellNum].SetInteger("Anim",2);
+
+            allCells[cellNum].SetInteger("Anim", 2);
             allCells[cellNum].SetTrigger("Trig");
             allCells[cellNum].GetComponent<Image>().sprite = mashroomSprite;
         }
-
-        createBottomPanel();
-
     }
-
 
     bool cellMatch(int i, int[] cells)
     {
@@ -138,6 +226,22 @@ public class levelControl : MonoBehaviour
 
     void flipInBottomPanel()
 	{
+        
+        Image[] allTopCells = topCanvas.GetComponentsInChildren<Image>();
+        Image[] allBottomCells = bottomCanvas.GetComponentsInChildren<Image>();
+        for (int row = 0; row < gridSize; row++)
+        {
+            for (int col = 0; col < gridSize; col++)
+            {
+                if (allTopCells[row * gridSize + col].sprite == mashroomSprite)
+                {
+                    allBottomCells[row*gridSize+col].GetComponent<Image>().sprite = mashroomSprite;
+                    allBottomCells[row*gridSize+col].GetComponent<Animator>().SetInteger("Anim", 1);
+                    allBottomCells[row*gridSize+col].GetComponent<Animator>().SetTrigger("Trig");
+                }
+            }
+        }
+        playerTurns = dicideTurns();
         int[] cells;
         cells = new int[playerTurns];
         Animator[] allCells = bottomCanvas.GetComponentsInChildren<Animator>();
@@ -149,6 +253,7 @@ public class levelControl : MonoBehaviour
             } while (cellMatch(i,cells));
             flipRespCells(cells[i], allCells, false);
 
+            Debug.Log(cells[i]%gridSize + " " + ((cells[i]/gridSize) % gridSize));
         }
         savePanel(true);
 	}
@@ -242,32 +347,7 @@ public class levelControl : MonoBehaviour
         return turns;
     }
 
-    void createBottomPanel()
-	{
-        bottomCanvas.GetComponent<RectTransform>().sizeDelta = new Vector2(cellPixel * gridSize, cellPixel * gridSize);
-        Image[] allCells = topCanvas.GetComponentsInChildren<Image>();
-        for (int row = 0; row < gridSize; row++)
-		{
-            for(int col =0; col < gridSize; col++)
-			{
-                GameObject cell = Instantiate(cellObj, bottomCanvas.transform);
-                cell.GetComponent<Grid>().x = row;
-                cell.GetComponent<Grid>().y = col;
-                if(allCells[row*gridSize + col].sprite == mashroomSprite)
-				{
-                    cell.GetComponent<Image>().sprite = mashroomSprite;
-                    cell.GetComponent<Animator>().SetInteger("Anim", 1);
-                    cell.GetComponent<Animator>().SetTrigger("Trig");
-                }
-            }
-		}
-        playerTurns = dicideTurns();
-
-        //Setting the turns
-        turnsText.GetComponent<TextMeshProUGUI>().text = playerTurns.ToString();
-
-        flipInBottomPanel();
-	}
+    
     void playCellAnim(Animator cell)
 	{
         soundPlayingCell.Play("playSound");
@@ -297,7 +377,6 @@ public class levelControl : MonoBehaviour
 
     void checkWinLose()
 	{
-        Debug.Log(heartInd);
         playerTurns--;
         //Setting the turns
         turnsText.GetComponent<TextMeshProUGUI>().text = playerTurns.ToString();
@@ -309,25 +388,34 @@ public class levelControl : MonoBehaviour
         {
             Image[] topPanelImages = topCanvas.GetComponentsInChildren<Image>();
             Image[] bottomPanelImages = bottomCanvas.GetComponentsInChildren<Image>();
-            
-            for(int row = 0; row < gridSize; row++ )
+
+            bool lose = false;
+            for (int row = 0; row < gridSize; row++ )
 			{
                 for (int col =0; col < gridSize; col++)
 				{
                     if(topPanelImages[row*gridSize+col].sprite != bottomPanelImages[row * gridSize + col].sprite)
 					{
-                        begingLoseSequence();
-                        return;
+                        if(!lose) begingLoseSequence();
+                        StartCoroutine(wrongTileAnim(bottomPanelImages[row * gridSize + col].GetComponent<Animator>()));
+                        lose = true;
 					}
 				}
 			}
-
+            if (lose) return;
+            StartCoroutine( startWinSequence());
         }
 		else
 		{
             StartCoroutine(disWinLoseCanva(false));
 		}
     }
+    IEnumerator wrongTileAnim(Animator cell)
+	{
+        yield return new WaitForSeconds(0.95f);
+        cell.Play("wrongTile");
+    }
+
     void begingLoseSequence()
 	{
         heartImages[heartInd].SetActive(false);
@@ -352,34 +440,90 @@ public class levelControl : MonoBehaviour
     }
     IEnumerator disWinLoseCanva(bool reset)
 	{
+        GetComponent<pauseScript>().enabled = false;
         yield return new WaitForSeconds(0.95f);
         winLoseCanvas.SetActive(false);
         if (reset)
         {
+            yield return new  WaitForSeconds(1.6f);
             mapAudioSource.clip = WrongMove;
-            sideStatues.Play("resetAnim");
             mapAudioSource.Play();
+            sideStatues.Play("resetAnim");
+            
             resetLevel();
         }
+        GetComponent<pauseScript>().enabled = true;
     }
 
     public void setPanelsActive(bool active)
 	{
         int offset = 900;
         if (active)
+        {
+            if (panelsActive)
+                return;
             offset *= 1;
+        }
         else
+        {
+            if (!panelsActive)
+                return;
             offset *= -1;
+            
+        }
+        panelsActive = active;
         topCanvas.GetComponent<RectTransform>().localPosition += Vector3.right * offset;
         bottomCanvas.GetComponent<RectTransform>().localPosition += Vector3.right * offset;
     }
-
-    IEnumerator startGameOverSequence()
+    IEnumerator startWinSequence()
 	{
         yield return new WaitForSeconds(0.95f);
+        winLoseCanvas.GetComponentInChildren<Image>().sprite = winSprite;
+        GetComponent<pauseScript>().enabled = false;
+
+        mapAudioSource.clip = clearLevelAudio;
+        mapAudioSource.Play();
+        sideStatues.Play("winAnim");
+
+        yield return new WaitForSeconds(1);
+        //To play again need to destroy the present chlidren
+        destroyChildObjs();
+        
+
+        yield return new WaitForSeconds(1);
+        winLoseCanvas.GetComponentInChildren<Image>().sprite = emptySprite;
+        startNextLevel();
+    }
+    void startNextLevel()
+	{
+
+        //Set them each time playAgain or win
+        level++;
+        difficulty++;
+        score++;
+        if(difficulty == 6)
+		{
+            gridSize++;
+            difficulty = 0;
+            if (gridSize == gridMaxSize + 1)
+                gridSize = gridMinSize;
+            bottomCanvaSprites = new Sprite[gridSize * gridSize];
+
+        }
+
+        startLevel();
+
+        winLoseCanvas.SetActive(false);
+    }
+    IEnumerator startGameOverSequence()
+	{
+        yield return new WaitForSeconds(2.25f);
         winLoseCanvas.GetComponentInChildren<Image>().sprite = loseSprite;
         GetComponent<pauseScript>().enabled = false;
         setPanelsActive(false);
+
+        //To play again need to destroy the present chlidren
+        destroyChildObjs();
 
         mapAudioSource.clip = gameOver;
         mapAudioSource.Play();
@@ -387,45 +531,43 @@ public class levelControl : MonoBehaviour
         yield return new WaitForSeconds(2);
         winLoseCanvas.GetComponentInChildren<Image>().sprite = emptySprite;
         pauseCanva.SetActive(true);
+
     }
 
-    
-    public void onclickPlayAgain()
+    public void playAgainFunc()
 	{
+        //Deleting already present objects if played again from pause 
+        if (GetComponent<pauseScript>().enabled)
+            destroyChildObjs();
+        //Set them each time playAgain or win
+        level = 1;
         gridSize = gridMinSize;
         difficulty = 0;
-
-        //Setting the score to zero 
-        scoreText.GetComponent<TextMeshProUGUI>().text = "0";
-
-        //Destorying all child objects in panels
-        destroyChildObjs();
-
-        //Restoring all lives
+        score = 0;
         heartInd = 0;
-        heartImages[0].SetActive(true);
-        heartImages[1].SetActive(true);
-        heartImages[2].SetActive(true);
 
-        setPanelsActive(true);
+        pauseCanva.SetActive(false);
 
-        //Creating the top panel 
-        createMap(topCanvas);
-        soundPlayingCell.Play("playSound");
+        startLevel();
+
+        winLoseCanvas.SetActive(false);
+
     }
 
 	void destroyChildObjs()
 	{
-        Transform topTransform = topCanvas.transform;
-        Transform bottomTransform = bottomCanvas.transform;
-        foreach (Transform child in topTransform)
+        Image[] topImage = topCanvas.GetComponentsInChildren<Image>();
+        Image[] bottomImage = bottomCanvas.GetComponentsInChildren<Image>();
+        foreach (Image child in topImage)
         {
             Destroy(child.gameObject);
         }
-        foreach (Transform child in bottomTransform)
+        foreach (Image child in bottomImage)
         {
             Destroy(child.gameObject);
         }
     }
+
+   
 
 }

@@ -69,9 +69,9 @@ public class levelControl : MonoBehaviour
             
             //Set them each time playAgain or win
             level = 1;
-            gridSize = gridMaxSize;
+            gridSize = gridMinSize;
             difficulty = 0;
-            score = 15;
+            score = 0;
             heartInd = 0;
 
             //Setting size of the save panel
@@ -106,7 +106,7 @@ public class levelControl : MonoBehaviour
     {
         yield return new WaitForSeconds(2);
         flipTopBottomCells();
-
+        
         //Setting the score to zero 
         scoreText.GetComponent<TextMeshProUGUI>().text = score.ToString();
         //Setting the turns
@@ -141,14 +141,6 @@ public class levelControl : MonoBehaviour
             }
         }
             
-        
-        
-        
-        
-        if(active)
-		{
-
-		}
     }
 
     
@@ -188,15 +180,18 @@ public class levelControl : MonoBehaviour
         Animator[] allCells = topCanvas.GetComponentsInChildren<Animator>();
         int flipCellPercentage = Random.Range(minflipTitles, maxflipTitles);
         int cellsToFlip = (flipCellPercentage * gridSize * gridSize) / 100;
-
         int cellNum;
         for (int i = 0; i < cellsToFlip; i++)
         {
-
-            do
+            if (cellsToFlip != gridSize * gridSize)
             {
-                cellNum = Random.Range(0, gridSize * gridSize - 1);
-            } while (allCells[cellNum].GetComponent<Image>().sprite == mashroomSprite);
+                do
+                {
+                    cellNum = Random.Range(0, gridSize*gridSize - 1) ;
+                } while (allCells[cellNum].GetComponent<Image>().sprite == mashroomSprite);
+            }
+            else
+                cellNum = i;
 
             allCells[cellNum].SetInteger("Anim", 2);
             allCells[cellNum].SetTrigger("Trig");
@@ -235,9 +230,9 @@ public class levelControl : MonoBehaviour
             {
                 if (allTopCells[row * gridSize + col].sprite == mashroomSprite)
                 {
-                    allBottomCells[row*gridSize+col].GetComponent<Image>().sprite = mashroomSprite;
-                    allBottomCells[row*gridSize+col].GetComponent<Animator>().SetInteger("Anim", 1);
-                    allBottomCells[row*gridSize+col].GetComponent<Animator>().SetTrigger("Trig");
+                    allBottomCells[row*gridSize+col].sprite = mashroomSprite;
+                    allBottomCells[row * gridSize + col].GetComponent<Animator>().SetInteger("Anim", 1);
+                    allBottomCells[row * gridSize + col].GetComponent<Animator>().SetTrigger("Trig");
                 }
             }
         }
@@ -270,7 +265,7 @@ public class levelControl : MonoBehaviour
                 else
 				{
                     cells[row * gridSize + col].sprite = bottomCanvaSprites[row * gridSize + col];
-                    if (bottomCanvaSprites[row * gridSize + col] == mashroomSprite)
+                    if (cells[row * gridSize + col].sprite == mashroomSprite)
                         cells[row * gridSize + col].GetComponent<Animator>().SetInteger("Anim",1);
                     else
                         cells[row * gridSize + col].GetComponent<Animator>().SetInteger("Anim", 0);
@@ -325,14 +320,14 @@ public class levelControl : MonoBehaviour
 	{
         if (playAnim) playCellAnim(cell);
         else playIdleAnim(cell);
-        flipCellSprite(cell);
+        flipCellSprite(cell.GetComponent<Image>());
     }
-    void flipCellSprite(Animator cell)
+    void flipCellSprite(Image cell)
 	{
-        if (cell.GetComponent<Image>().sprite == mashroomSprite)
-            cell.GetComponent<Image>().sprite = leafSprite;
+        if (cell.sprite == mashroomSprite)
+            cell.sprite = leafSprite;
         else
-            cell.GetComponent<Image>().sprite = mashroomSprite;
+            cell.sprite = mashroomSprite;
 
     }
     int dicideTurns()
@@ -412,7 +407,7 @@ public class levelControl : MonoBehaviour
     }
     IEnumerator wrongTileAnim(Animator cell)
 	{
-        yield return new WaitForSeconds(0.95f);
+        yield return new WaitForSeconds(1f);
         cell.Play("wrongTile");
     }
 
@@ -441,17 +436,18 @@ public class levelControl : MonoBehaviour
     IEnumerator disWinLoseCanva(bool reset)
 	{
         GetComponent<pauseScript>().enabled = false;
-        yield return new WaitForSeconds(0.95f);
-        winLoseCanvas.SetActive(false);
+        yield return new WaitForSeconds(1f);
+        
         if (reset)
         {
-            yield return new  WaitForSeconds(1.6f);
+            yield return new  WaitForSeconds(1.7f);
             mapAudioSource.clip = WrongMove;
             mapAudioSource.Play();
             sideStatues.Play("resetAnim");
             
             resetLevel();
         }
+        winLoseCanvas.SetActive(false);
         GetComponent<pauseScript>().enabled = true;
     }
 
@@ -477,7 +473,7 @@ public class levelControl : MonoBehaviour
     }
     IEnumerator startWinSequence()
 	{
-        yield return new WaitForSeconds(0.95f);
+        yield return new WaitForSeconds(1f);
         winLoseCanvas.GetComponentInChildren<Image>().sprite = winSprite;
         GetComponent<pauseScript>().enabled = false;
 
@@ -485,7 +481,7 @@ public class levelControl : MonoBehaviour
         mapAudioSource.Play();
         sideStatues.Play("winAnim");
 
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(1.1f);
         //To play again need to destroy the present chlidren
         destroyChildObjs();
         
@@ -517,7 +513,7 @@ public class levelControl : MonoBehaviour
     }
     IEnumerator startGameOverSequence()
 	{
-        yield return new WaitForSeconds(2.25f);
+        yield return new WaitForSeconds(2.7f);
         winLoseCanvas.GetComponentInChildren<Image>().sprite = loseSprite;
         GetComponent<pauseScript>().enabled = false;
         setPanelsActive(false);
@@ -528,7 +524,7 @@ public class levelControl : MonoBehaviour
         mapAudioSource.clip = gameOver;
         mapAudioSource.Play();
 
-        yield return new WaitForSeconds(2);
+        yield return new WaitForSeconds(1.1f);
         winLoseCanvas.GetComponentInChildren<Image>().sprite = emptySprite;
         pauseCanva.SetActive(true);
 

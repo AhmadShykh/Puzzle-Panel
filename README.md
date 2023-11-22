@@ -9,5 +9,6 @@ Recreated this game using Unity 2D core template version 2022.3.6f1.
 
 ![image](https://github.com/AhmadShykh/Puzzle-Panel/assets/52326090/c9224016-5612-4cfe-ab0e-f8300c0ea46a)
 
-![Uploading image.png…]()
+![image](https://github.com/AhmadShykh/Puzzle-Panel/assets/52326090/67b4c991-20e7-4c06-a7b8-250148b55735)
+
 
